@@ -1,4 +1,3 @@
-
 <!doctype html>
 <html lang="en">
 
@@ -6,7 +5,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>TOTP</title>
-  <link rel="icon" type="image/png" href="/totp_viewer.png">
+  <link rel="icon" type="image/png" href="/totp_viewer_icon.png">
   <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
   <style>
     :root {
@@ -929,7 +928,7 @@ if (!qs.get('a') || !qs.get('s')) {
     el.title.textContent = `${desc} (${account})`;
 
     // TOTP表示/非表示の制御
-    let isVisible = false;  // デフォルトを非表示に変更
+    let isVisible = true;  // デフォルト
     let currentOTP = "------";
     const toggleBtn = document.getElementById("toggleVisibility");
     
@@ -994,13 +993,26 @@ if (!qs.get('a') || !qs.get('s')) {
         const remainMs = total - (now % total);
         const remainSec = Math.ceil(remainMs / 1000);
         el.remain.textContent = remainSec;
+
         const pct = (now % total) / total;
+
         el.circle.style.strokeDashoffset = (CIRCUM * (1 - pct)).toFixed(2);
-        el.circle.style.stroke = lerpColor3(pct);
+
+        const color = lerpColor3(pct);
+        el.circle.style.stroke = color;
+
+        // ★追加：#digits の背景を円と同じ色にする
+        el.digits.style.background = color;
+
+        // （任意）背景が明るいときの可読性が気になるなら
+        // el.digits.style.color = "#0b1220";
+        // （あるいは pct に応じて白/黒を切り替えるロジックでもOK）
+
         requestAnimationFrame(frame);
       }
       requestAnimationFrame(frame);
     }
+
 
     async function loop() {
       let last = "";
