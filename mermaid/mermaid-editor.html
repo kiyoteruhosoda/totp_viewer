@@ -17,7 +17,7 @@
 -->
 <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
 <script>
-const APP_VERSION = '1.2.4';
+const APP_VERSION = '1.2.5';
 </script>
 
 <style>
@@ -1004,17 +1004,37 @@ function getFilename() {
   return `diagram-${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}`;
 }
 
-document.getElementById('btn-save-src').addEventListener('click', () => {
-  const code = editorEl.value;
-  if (!code.trim()) { setStatus('error', 'Nothing to save'); return; }
-
-  const dataUrl = 'data:text/plain;charset=utf-8,' + encodeURIComponent(code);
+// ── File save helper ──────────────────────────
+// showSaveFilePicker gives a native OS save dialog on Chrome/Edge (HTTPS).
+// Falls back to <a download> for Firefox / file:// contexts.
+async function saveFile(content, filename, mimeType, extensions) {
+  if ('showSaveFilePicker' in window) {
+    try {
+      const handle = await window.showSaveFilePicker({
+        suggestedName: filename,
+        types: [{ description: filename, accept: { [mimeType]: extensions } }],
+      });
+      const writable = await handle.createWritable();
+      await writable.write(content);
+      await writable.close();
+      return;
+    } catch (e) {
+      if (e.name === 'AbortError') return;
+      // fall through to data URL fallback
+    }
+  }
   const a = document.createElement('a');
-  a.href = dataUrl;
-  a.download = `${getFilename()}.mmd`;
+  a.href = 'data:' + mimeType + ';charset=utf-8,' + encodeURIComponent(content);
+  a.download = filename;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
+}
+
+document.getElementById('btn-save-src').addEventListener('click', async () => {
+  const code = editorEl.value;
+  if (!code.trim()) { setStatus('error', 'Nothing to save'); return; }
+  await saveFile(code, `${getFilename()}.mmd`, 'text/plain', ['.mmd']);
   setStatus('ok', `Saved: ${getFilename()}.mmd`);
   setTimeout(() => setStatus('ok', 'Done'), 1500);
 });
@@ -1218,13 +1238,8 @@ document.getElementById('btn-save').addEventListener('click', async () => {
   try {
     setStatus('pending', 'Exporting...');
     const exportSvg = await getExportSvg();
-    const dataUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(exportSvg);
-    const a = document.createElement('a');
-    a.href = dataUrl;
-    a.download = `diagram-${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}.svg`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    const svgFilename = `diagram-${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}.svg`;
+    await saveFile(exportSvg, svgFilename, 'image/svg+xml', ['.svg']);
     setStatus('ok', 'SVG saved (Default theme)');
     setTimeout(() => setStatus('ok', 'Done'), 1500);
   } catch (e) {
