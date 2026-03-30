@@ -17,7 +17,7 @@
 -->
 <script src="mermaid.min.js"></script>
 <script>
-const APP_VERSION = '1.1.9';
+const APP_VERSION = '1.2.1';
 </script>
 
 <style>
@@ -107,6 +107,7 @@ const APP_VERSION = '1.1.9';
     color: var(--text-dim);
     font-family: var(--font-ui);
     font-size: 12px;
+    text-transform: none;
     cursor: pointer;
     transition: background var(--transition), color var(--transition), border-color var(--transition);
     white-space: nowrap;
@@ -213,7 +214,6 @@ const APP_VERSION = '1.1.9';
     color: var(--text-dim);
     letter-spacing: .06em;
     text-transform: uppercase;
-    font-weight: 600;
   }
   .pane-header .dot {
     width: 6px; height: 6px;
@@ -503,20 +503,6 @@ const APP_VERSION = '1.1.9';
         <div class="dot"></div>
         source
         <span style="margin-left:auto;display:flex;gap:4px;align-items:center;">
-          <input id="filename-input" type="text" value="diagram" spellcheck="false"
-            title="Filename (without extension)"
-            style="
-              background: var(--bg);
-              border: 1px solid var(--border2);
-              border-radius: 4px;
-              color: var(--text-dim);
-              font-family: var(--font-mono);
-              font-size: 11px;
-              padding: 2px 6px;
-              width: 120px;
-              outline: none;
-              transition: border-color var(--transition), color var(--transition);
-            ">
           <button class="btn btn-pane" id="btn-save-src" title="Save source (.mmd) (Ctrl+S)">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
@@ -525,15 +511,15 @@ const APP_VERSION = '1.1.9';
             </svg>
             Save
           </button>
-          <button class="btn btn-pane" id="btn-load-src" title="Load source (.mmd)">
+          <label class="btn btn-pane" id="btn-load-src" title="Load source (.mmd)" style="cursor:pointer;">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v5"/>
               <polyline points="14 14 19 19 24 14"/>
               <line x1="19" y1="19" x2="19" y2="10"/>
             </svg>
             Load
-          </button>
-          <input type="file" id="file-input" accept=".mmd,.txt" style="display:none">
+            <input type="file" id="file-input" accept=".mmd,.txt" style="display:none">
+          </label>
         </span>
       </div>
       <textarea id="editor" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"></textarea>
@@ -1015,8 +1001,7 @@ btnToggle.addEventListener('click', toggleEditor);
 // ──────────────────────────────────────────────
 // ── Save / Load source (.mmd) ─────────────────
 function getFilename() {
-  const name = document.getElementById('filename-input').value.trim() || 'diagram';
-  return name.replace(/\.mmd$/i, ''); // strip extension if user typed it
+  return `diagram-${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}`;
 }
 
 document.getElementById('btn-save-src').addEventListener('click', () => {
@@ -1036,10 +1021,6 @@ document.getElementById('btn-save-src').addEventListener('click', () => {
   setTimeout(() => setStatus('ok', 'Done'), 1500);
 });
 
-document.getElementById('btn-load-src').addEventListener('click', () => {
-  document.getElementById('file-input').click();
-});
-
 document.getElementById('file-input').addEventListener('change', e => {
   const file = e.target.files[0];
   if (!file) return;
@@ -1048,7 +1029,6 @@ document.getElementById('file-input').addEventListener('change', e => {
   reader.onload = evt => {
     editorEl.value = evt.target.result;
     charCount.textContent = editorEl.value.length + ' chars';
-    document.getElementById('filename-input').value = file.name.replace(/\.[^.]+$/, '');
     updatePlaceholder();
     setStatus('ok', `Loaded: ${file.name}`);
     render();
@@ -1396,7 +1376,6 @@ editorPane.addEventListener('drop', e => {
   reader.onload = evt => {
     editorEl.value = evt.target.result;
     charCount.textContent = editorEl.value.length + ' chars';
-    document.getElementById('filename-input').value = file.name.replace(/\.[^.]+$/, '');
     updatePlaceholder();
     setStatus('ok', `Loaded: ${file.name}`);
     render();
