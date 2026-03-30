@@ -16,7 +16,7 @@
 -->
 <script src="mermaid.min.js"></script>
 <script>
-const APP_VERSION = '1.1.3';
+const APP_VERSION = '1.1.7';
 </script>
 
 <style>
@@ -185,6 +185,11 @@ const APP_VERSION = '1.1.3';
     flex-shrink: 0;
     overflow: hidden;
   }
+  #editor-pane.drag-over {
+    outline: 2px dashed var(--accent);
+    outline-offset: -2px;
+    background: var(--accent-glow);
+  }
   #editor-pane.hidden {
     width: 0 !important;
     min-width: 0 !important;
@@ -219,8 +224,8 @@ const APP_VERSION = '1.1.3';
   #editor {
     flex: 1;
     width: 100%;
-    background: var(--bg);
-    color: #c9d1d9;
+    background: var(--editor-bg, var(--bg));
+    color: var(--editor-fg, #c9d1d9);
     border: none;
     outline: none;
     resize: none;
@@ -231,6 +236,7 @@ const APP_VERSION = '1.1.3';
     tab-size: 2;
     caret-color: var(--accent);
     overflow: auto;
+    transition: background 200ms ease, color 200ms ease;
   }
   #editor::selection { background: rgba(47,129,247,.35); }
   #editor::-webkit-scrollbar { width: 8px; }
@@ -463,8 +469,8 @@ const APP_VERSION = '1.1.3';
     <div id="toolbar-right">
       <span style="font-size:11px;color:var(--text-dim);">Theme</span>
       <select id="theme-select">
+        <option value="default" selected>Default</option>
         <option value="dark">Dark</option>
-        <option value="default">Default</option>
         <option value="neutral">Neutral</option>
         <option value="forest">Forest</option>
         <option value="base">Base</option>
@@ -635,7 +641,7 @@ const themeSelect= document.getElementById('theme-select');
 // ──────────────────────────────────────────────
 //  Mermaid init
 // ──────────────────────────────────────────────
-function initMermaid(theme = 'dark') {
+function initMermaid(theme = 'default') {
   mermaid.initialize({
     startOnLoad: false,
     theme,
@@ -644,7 +650,6 @@ function initMermaid(theme = 'dark') {
     fontSize: 14,
   });
 }
-initMermaid('dark');
 
 // ──────────────────────────────────────────────
 //  Render
@@ -1231,8 +1236,89 @@ document.getElementById('btn-save').addEventListener('click', async () => {
 
 themeSelect.addEventListener('change', () => {
   initMermaid(themeSelect.value);
+  applyUiTheme(themeSelect.value);
   render();
 });
+
+// ── UI theme palettes ─────────────────────────
+// Each entry overrides the CSS custom properties defined in :root.
+// Only properties that differ from the dark (default) palette need listing.
+const UI_THEMES = {
+  dark: {
+    '--bg':        '#0d1117',
+    '--surface':   '#161b22',
+    '--surface2':  '#1c2128',
+    '--border':    '#30363d',
+    '--border2':   '#21262d',
+    '--text':      '#e6edf3',
+    '--text-dim':  '#7d8590',
+    '--accent':    '#2f81f7',
+    '--accent-glow':'rgba(47,129,247,.25)',
+    '--editor-bg': '#1e2330',
+    '--editor-fg': '#c9d1d9',
+  },
+  default: {
+    '--bg':        '#f0f0f0',
+    '--surface':   '#ffffff',
+    '--surface2':  '#e8e8e8',
+    '--border':    '#d0d0d0',
+    '--border2':   '#c0c0c0',
+    '--text':      '#24292f',
+    '--text-dim':  '#57606a',
+    '--accent':    '#0969da',
+    '--accent-glow':'rgba(9,105,218,.2)',
+    '--editor-bg': '#ffffff',
+    '--editor-fg': '#24292f',
+  },
+  neutral: {
+    '--bg':        '#e8e8e8',
+    '--surface':   '#f5f5f5',
+    '--surface2':  '#ebebeb',
+    '--border':    '#cccccc',
+    '--border2':   '#c0c0c0',
+    '--text':      '#333333',
+    '--text-dim':  '#777777',
+    '--accent':    '#555555',
+    '--accent-glow':'rgba(85,85,85,.2)',
+    '--editor-bg': '#f5f5f5',
+    '--editor-fg': '#333333',
+  },
+  forest: {
+    '--bg':        '#1a2e1a',
+    '--surface':   '#223322',
+    '--surface2':  '#1e2e1e',
+    '--border':    '#3a5a3a',
+    '--border2':   '#2e4a2e',
+    '--text':      '#d4e8d4',
+    '--text-dim':  '#7a9e7a',
+    '--accent':    '#4caf50',
+    '--accent-glow':'rgba(76,175,80,.25)',
+    '--editor-bg': '#1e2e1e',
+    '--editor-fg': '#d4e8d4',
+  },
+  base: {
+    '--bg':        '#f8f8f8',
+    '--surface':   '#ffffff',
+    '--surface2':  '#f0f0f0',
+    '--border':    '#e0e0e0',
+    '--border2':   '#d4d4d4',
+    '--text':      '#1a1a1a',
+    '--text-dim':  '#666666',
+    '--accent':    '#8b5cf6',
+    '--accent-glow':'rgba(139,92,246,.2)',
+    '--editor-bg': '#ffffff',
+    '--editor-fg': '#1a1a1a',
+  },
+};
+
+function applyUiTheme(theme) {
+  const palette = UI_THEMES[theme] ?? UI_THEMES.dark;
+  const root = document.documentElement;
+  Object.entries(palette).forEach(([k, v]) => root.style.setProperty(k, v));
+}
+
+// Keep old name as alias (called from boot)
+const applyEditorTheme = applyUiTheme;
 
 // ──────────────────────────────────────────────
 //  Keyboard shortcuts
@@ -1270,10 +1356,70 @@ window.addEventListener('keydown', e => {
 editorEl.addEventListener('input', () => { scheduleRender(); updatePlaceholder(); });
 
 // ──────────────────────────────────────────────
+//  Drag & drop .mmd / .txt onto editor
+// ──────────────────────────────────────────────
+editorPane.addEventListener('dragover', e => {
+  e.preventDefault();
+  editorPane.classList.add('drag-over');
+});
+editorPane.addEventListener('dragleave', e => {
+  if (!editorPane.contains(e.relatedTarget)) editorPane.classList.remove('drag-over');
+});
+editorPane.addEventListener('drop', e => {
+  e.preventDefault();
+  editorPane.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = evt => {
+    editorEl.value = evt.target.result;
+    charCount.textContent = editorEl.value.length + ' chars';
+    updatePlaceholder();
+    setStatus('ok', `Loaded: ${file.name}`);
+    render();
+  };
+  reader.onerror = () => setStatus('error', 'Drop load failed');
+  reader.readAsText(file, 'utf-8');
+});
+
+// ──────────────────────────────────────────────
+//  Settings persistence (localStorage)
+// ──────────────────────────────────────────────
+const SETTINGS_KEY = 'mermaid-editor-settings';
+
+function saveSettings() {
+  try {
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify({
+      theme: themeSelect.value,
+    }));
+  } catch (_) { /* localStorage unavailable (e.g. strict privacy mode) */ }
+}
+
+function loadSettings() {
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY);
+    if (!raw) return {};
+    return JSON.parse(raw);
+  } catch (_) { return {}; }
+}
+
+// ──────────────────────────────────────────────
 //  Boot
 // ──────────────────────────────────────────────
+
+// Restore saved settings before first render
+const savedSettings = loadSettings();
+if (savedSettings.theme && [...themeSelect.options].some(o => o.value === savedSettings.theme)) {
+  themeSelect.value = savedSettings.theme;
+}
+
+// Save settings whenever theme changes
+themeSelect.addEventListener('change', saveSettings);
+
 charCount.textContent = editorEl.value.length + ' chars';
 updatePlaceholder();
+applyUiTheme(themeSelect.value);
+initMermaid(themeSelect.value);
 
 // Version display: app version + mermaid library version
 const mermaidVersion = typeof mermaid !== 'undefined' && mermaid.version ? mermaid.version : '10';
