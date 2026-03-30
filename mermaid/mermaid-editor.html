@@ -1,22 +1,22 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ja">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Mermaid Editor</title>
 <!--
-  ===== ローカル（file://）で使う場合 =====
-  CDN読み込みはブラウザのトラッキング防止でブロックされる場合があります。
-  完全オフライン化の手順：
-  1. 以下のURLをブラウザで開き、ページを名前を付けて保存
+  ===== Running locally (file://) =====
+  CDN loading may be blocked by browser tracking prevention.
+  Steps to go fully offline:
+  1. Open the URL below and save the file
      https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js
-  2. このHTMLと同じフォルダに mermaid.min.js として保存
-  3. 下の <script src="..."> を <script src="./mermaid.min.js"> に変更
+  2. Save as mermaid.min.js in the same folder as this HTML
+  3. Change <script src="...cdn..."> to <script src="./mermaid.min.js">
   ==========================================
 -->
 <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
 <script>
-const APP_VERSION = '1.0.0';
+const APP_VERSION = '1.0.1';
 </script>
 
 <style>
@@ -382,7 +382,7 @@ const APP_VERSION = '1.0.0';
     <div class="toolbar-sep"></div>
 
     <!-- Toggle editor -->
-    <button class="btn active" id="btn-toggle" title="Toggle Editor (Alt+E)">
+    <button class="btn active" id="btn-toggle" title="Toggle editor (Alt+E)">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <rect x="3" y="3" width="18" height="18" rx="2"/>
         <path d="M9 3v18"/>
@@ -400,7 +400,7 @@ const APP_VERSION = '1.0.0';
     </button>
 
     <!-- Fit to view -->
-    <button class="btn" id="btn-fit" title="Fit to View (Home)">
+    <button class="btn" id="btn-fit" title="Fit to view (Home)">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
       </svg>
@@ -408,14 +408,14 @@ const APP_VERSION = '1.0.0';
     </button>
 
     <!-- 1:1 -->
-    <button class="btn btn-icon" id="btn-oneto1" title="Actual Size 100% (Ctrl+0)">
+    <button class="btn btn-icon" id="btn-oneto1" title="Actual size 100% (Ctrl+0)">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>
       </svg>
     </button>
 
     <!-- Copy PNG -->
-    <button class="btn btn-icon" id="btn-copy" title="Copy as PNG (can be pasted into Teams, etc.)">
+    <button class="btn btn-icon" id="btn-copy" title="Copy as PNG (paste into Teams etc.)">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
         <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
@@ -424,7 +424,7 @@ const APP_VERSION = '1.0.0';
     </button>
 
     <!-- Save SVG -->
-    <button class="btn" id="btn-save" title="Save as SVG File">
+    <button class="btn" id="btn-save" title="Save as SVG file">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
         <polyline points="7 10 12 15 17 10"/>
@@ -445,14 +445,14 @@ const APP_VERSION = '1.0.0';
 
       <div class="toolbar-sep"></div>
 
-      <button class="btn btn-icon" id="btn-zoom-out" title="Zoom Out (-)">
+      <button class="btn btn-icon" id="btn-zoom-out" title="Zoom out (-)">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
           <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
           <line x1="8" y1="11" x2="14" y2="11"/>
         </svg>
       </button>
       <span id="zoom-label">100%</span>
-      <button class="btn btn-icon" id="btn-zoom-in" title="Zoom In (+)">
+      <button class="btn btn-icon" id="btn-zoom-in" title="Zoom in (+)">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
           <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
           <line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/>
@@ -467,7 +467,7 @@ const APP_VERSION = '1.0.0';
     <div id="editor-pane">
       <div class="pane-header">
         <div class="dot"></div>
-        Source
+        source
       </div>
       <textarea id="editor" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"></textarea>
     </div>
@@ -479,12 +479,12 @@ const APP_VERSION = '1.0.0';
     <div id="preview-pane">
       <div class="pane-header">
         <div class="dot" style="background:var(--success);box-shadow:0 0 6px var(--success)"></div>
-        Preview
+        preview
         <span style="margin-left:auto;display:flex;gap:8px;align-items:center;">
           <span class="shortcut-hint">Ctrl+Scroll</span>
           <span style="color:var(--text-dim);font-size:10px;">Zoom</span>
           <span class="shortcut-hint">Drag</span>
-          <span style="color:var(--text-dim);font-size:10px;">Move</span>
+          <span style="color:var(--text-dim);font-size:10px;">Pan</span>
         </span>
       </div>
       <div id="canvas-wrap">
@@ -519,7 +519,7 @@ const APP_VERSION = '1.0.0';
     </div>
     <div id="statusbar-right">
       <span style="color:var(--text-dim);font-size:10px;">
-        Alt+E: Toggle Editor &nbsp;|&nbsp; Ctrl+Enter: Render &nbsp;|&nbsp; Home: Fit &nbsp;|&nbsp; Ctrl+0: 1:1
+        Alt+E: Toggle editor &nbsp;|&nbsp; Ctrl+Enter: Render &nbsp;|&nbsp; Home: Fit &nbsp;|&nbsp; Ctrl+0: 1:1
       </span>
       <span style="color:var(--border);font-size:10px;margin:0 8px;">|</span>
       <span id="version-label" style="color:var(--text-dim);font-size:10px;font-family:var(--font-mono);"></span>
@@ -594,7 +594,7 @@ async function render() {
   const code = editorEl.value.trim();
   if (!code) return;
 
-  setStatus('pending', '描画中...');
+  setStatus('pending', 'Rendering...');
   errorBox.classList.remove('visible');
 
   const id = `mermaid-${++renderCount}`;
@@ -646,12 +646,12 @@ async function render() {
         applyTransform();
       }
     });
-    setStatus('ok', '描画完了');
+    setStatus('ok', 'Done');
   } catch (err) {
     const msg = err.message || String(err);
     errorBox.textContent = '⚠ ' + msg;
     errorBox.classList.add('visible');
-    setStatus('error', 'エラー');
+    setStatus('error', 'Error');
     lastSvgString = '';
 
     const stray = document.getElementById(id);
@@ -940,7 +940,7 @@ document.getElementById('btn-zoom-out').addEventListener('click', () => setZoom(
 // ── Export SVG (re-rendered with default theme) ─
 async function getExportSvg() {
   const code = editorEl.value.trim();
-  if (!code) throw new Error('ソースが空です');
+  if (!code) throw new Error('Source is empty');
 
   mermaid.initialize({
     startOnLoad: false,
@@ -969,7 +969,7 @@ async function getExportSvg() {
 //
 // 2. <foreignObject> clipping (flowcharts):
 //    Mermaid measures label dimensions in the live DOM and writes them as
-//    exact px (e.g. width="32" height="16" for "開始" at 16px font).
+//    exact px (e.g. width="32" height="16" for "Start" at 16px font).
 //    When the SVG is opened in a different browser / OS, font metrics differ
 //    slightly and text overflows the foreignObject clipping rect → letters cut.
 //    Fix: add overflow="visible" to all foreignObject elements.
@@ -1065,7 +1065,7 @@ function svgToPngBlob(svgString) {
       ctx.drawImage(img, 0, 0, w, h);
       canvas.toBlob(b => b ? resolve(b) : reject(new Error('toBlob failed')), 'image/png');
     };
-    img.onerror = () => reject(new Error('SVG→img 変換失敗'));
+    img.onerror = () => reject(new Error('SVG to image conversion failed'));
     img.src = dataUrl;
   });
 }
@@ -1075,8 +1075,8 @@ function flashCopyBtn(success) {
   const btn = document.getElementById('btn-copy');
   const prev = btn.innerHTML;
   btn.innerHTML = success
-    ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> コピー完了`
-    : `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> 失敗`;
+    ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Copied`
+    : `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Failed`;
   btn.style.color    = success ? 'var(--success)' : 'var(--error)';
   btn.style.borderColor = success ? 'var(--success)' : 'var(--error)';
   btn.style.background  = success ? 'rgba(63,185,80,.15)' : 'rgba(248,81,73,.12)';
@@ -1089,28 +1089,28 @@ function flashCopyBtn(success) {
 }
 
 document.getElementById('btn-copy').addEventListener('click', async () => {
-  if (!lastSvgString) { setStatus('error', '描画されたSVGがありません'); return; }
+  if (!lastSvgString) { setStatus('error', 'No rendered diagram'); return; }
   try {
-    setStatus('pending', 'PNG変換中...');
+    setStatus('pending', 'Converting to PNG...');
     const exportSvg = await getExportSvg();
     const pngBlob = await svgToPngBlob(exportSvg);
     await navigator.clipboard.write([
       new ClipboardItem({ 'image/png': pngBlob })
     ]);
     flashCopyBtn(true);
-    setStatus('ok', 'PNGをコピーしました（Teams等に貼り付け可）');
-    setTimeout(() => setStatus('ok', '描画完了'), 2500);
+    setStatus('ok', 'PNG copied (ready to paste into Teams etc.)');
+    setTimeout(() => setStatus('ok', 'Done'), 2500);
   } catch (e) {
     console.error(e);
     flashCopyBtn(false);
-    setStatus('error', 'コピー失敗: ' + (e.message || e));
+    setStatus('error', 'Copy failed: ' + (e.message || e));
   }
 });
 
 document.getElementById('btn-save').addEventListener('click', async () => {
-  if (!lastSvgString) { setStatus('error', '描画されたSVGがありません'); return; }
+  if (!lastSvgString) { setStatus('error', 'No rendered diagram'); return; }
   try {
-    setStatus('pending', 'エクスポート中...');
+    setStatus('pending', 'Exporting...');
     const exportSvg = await getExportSvg();
     const blob = new Blob([exportSvg], { type: 'image/svg+xml;charset=utf-8' });
     const url  = URL.createObjectURL(blob);
@@ -1121,10 +1121,10 @@ document.getElementById('btn-save').addEventListener('click', async () => {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    setStatus('ok', 'SVGを保存しました（Defaultテーマ）');
-    setTimeout(() => setStatus('ok', '描画完了'), 1500);
+    setStatus('ok', 'SVG saved (Default theme)');
+    setTimeout(() => setStatus('ok', 'Done'), 1500);
   } catch (e) {
-    setStatus('error', '保存失敗: ' + (e.message || e));
+    setStatus('error', 'Save failed: ' + (e.message || e));
   }
 });
 
