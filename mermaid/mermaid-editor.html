@@ -15,9 +15,9 @@
   3. Change <script src="...cdn..."> to <script src="./mermaid.min.js">
   ==========================================
 -->
-<script src="mermaid.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
 <script>
-const APP_VERSION = '1.2.1';
+const APP_VERSION = '1.2.3';
 </script>
 
 <style>
@@ -1016,7 +1016,7 @@ document.getElementById('btn-save-src').addEventListener('click', () => {
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  setTimeout(() => URL.revokeObjectURL(url), 100);
   setStatus('ok', `Saved: ${getFilename()}.mmd`);
   setTimeout(() => setStatus('ok', 'Done'), 1500);
 });
@@ -1228,7 +1228,7 @@ document.getElementById('btn-save').addEventListener('click', async () => {
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    setTimeout(() => URL.revokeObjectURL(url), 100);
     setStatus('ok', 'SVG saved (Default theme)');
     setTimeout(() => setStatus('ok', 'Done'), 1500);
   } catch (e) {
@@ -1330,7 +1330,9 @@ window.addEventListener('keydown', e => {
   if (e.altKey && e.key === 'e') { e.preventDefault(); toggleEditor(); }
   if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); render(); }
   if ((e.ctrlKey || e.metaKey) && e.key === 's' && !e.shiftKey) {
-    e.preventDefault(); document.getElementById('btn-save-src').click();
+    e.preventDefault();
+    e.stopPropagation();
+    document.getElementById('btn-save-src').click();
   }
 
   if ((e.ctrlKey || e.metaKey) && (e.key === '=' || e.key === '+')) {
