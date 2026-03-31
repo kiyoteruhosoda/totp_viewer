@@ -17,7 +17,7 @@
 -->
 <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
 <script>
-const APP_VERSION = '1.2.5';
+const APP_VERSION = '1.3.1';
 </script>
 
 <style>
@@ -111,6 +111,8 @@ const APP_VERSION = '1.2.5';
     cursor: pointer;
     transition: background var(--transition), color var(--transition), border-color var(--transition);
     white-space: nowrap;
+    position: relative;
+    overflow: hidden;
   }
   .btn:hover {
     background: var(--surface2);
@@ -123,6 +125,36 @@ const APP_VERSION = '1.2.5';
     color: var(--accent);
   }
   .btn svg { flex-shrink: 0; }
+
+  /* Ripple */
+  .btn .ripple {
+    position: absolute;
+    border-radius: 50%;
+    background: var(--accent);
+    opacity: 0.35;
+    transform: scale(0);
+    animation: ripple-expand 400ms ease-out forwards;
+    pointer-events: none;
+  }
+  @keyframes ripple-expand {
+    to { transform: scale(4); opacity: 0; }
+  }
+
+  @keyframes btn-spin {
+    to { transform: rotate(360deg); }
+  }
+
+  /* Spinner on button — injected <span class="spinner"> */
+  .btn.spinning > *:not(.spinner):not(.ripple) { visibility: hidden; }
+  .btn.spinning .spinner {
+    position: absolute;
+    width: 13px; height: 13px;
+    border: 2px solid color-mix(in srgb, var(--accent) 30%, transparent);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: btn-spin 600ms linear infinite;
+    pointer-events: none;
+  }
 
   .btn-pane {
     padding: 2px 7px;
@@ -433,20 +465,6 @@ const APP_VERSION = '1.2.5';
       Render
     </button>
 
-    <!-- Fit to view -->
-    <button class="btn" id="btn-fit" title="Fit to view (Home)">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
-      </svg>
-      Fit
-    </button>
-
-    <!-- 1:1 -->
-    <button class="btn btn-icon" id="btn-oneto1" title="Actual size 100% (Ctrl+0)">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>
-      </svg>
-    </button>
 
     <!-- Copy PNG -->
     <button class="btn btn-icon" id="btn-copy" title="Copy as PNG (paste into Teams etc.)">
@@ -1000,8 +1018,14 @@ btnToggle.addEventListener('click', toggleEditor);
 //  Toolbar buttons
 // ──────────────────────────────────────────────
 // ── Save / Load source (.mmd) ─────────────────
+// Tracks the stem of the last loaded file (e.g. "my-diagram" from "my-diagram.mmd").
+// Used by getFilename() so Save suggests the same name for overwrite.
+let loadedFilename = null;
+
 function getFilename() {
-  return `diagram-${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}`;
+  return loadedFilename
+    ? loadedFilename
+    : `diagram-${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}`;
 }
 
 // ── File save helper ──────────────────────────
@@ -1031,34 +1055,64 @@ async function saveFile(content, filename, mimeType, extensions) {
   document.body.removeChild(a);
 }
 
-document.getElementById('btn-save-src').addEventListener('click', async () => {
+document.getElementById('btn-save-src').addEventListener('click', async function() {
   const code = editorEl.value;
   if (!code.trim()) { setStatus('error', 'Nothing to save'); return; }
-  await saveFile(code, `${getFilename()}.mmd`, 'text/plain', ['.mmd']);
+  await spinBtn(this, saveFile(code, `${getFilename()}.mmd`, 'text/plain', ['.mmd']));
   setStatus('ok', `Saved: ${getFilename()}.mmd`);
   setTimeout(() => setStatus('ok', 'Done'), 1500);
 });
 
-document.getElementById('file-input').addEventListener('change', e => {
+// Load spinner: starts on click, stops on file read or dialog cancel
+const loadBtn = document.getElementById('btn-load-src');
+const fileInput = document.getElementById('file-input');
+let loadSpinner = null;
+
+loadBtn.addEventListener('click', () => {
+  loadSpinner = document.createElement('span');
+  loadSpinner.className = 'spinner';
+  loadBtn.appendChild(loadSpinner);
+  loadBtn.classList.add('spinning');
+});
+
+function stopLoadSpin() {
+  loadBtn.classList.remove('spinning');
+  if (loadSpinner) { loadSpinner.remove(); loadSpinner = null; }
+}
+
+// Modern browsers (Chrome 113+, Firefox 91+): cancel event on dialog dismiss
+fileInput.addEventListener('cancel', stopLoadSpin);
+
+// Fallback: window regains focus when dialog closes for any reason
+loadBtn.addEventListener('click', () => {
+  const onFocus = () => {
+    window.removeEventListener('focus', onFocus);
+    // Delay so change event fires first if a file was chosen
+    setTimeout(() => { if (loadSpinner) stopLoadSpin(); }, 300);
+  };
+  window.addEventListener('focus', onFocus);
+});
+
+fileInput.addEventListener('change', e => {
   const file = e.target.files[0];
-  if (!file) return;
+  if (!file) { stopLoadSpin(); return; }
 
   const reader = new FileReader();
   reader.onload = evt => {
     editorEl.value = evt.target.result;
     charCount.textContent = editorEl.value.length + ' chars';
+    loadedFilename = file.name.replace(/\.[^.]+$/, '');
     updatePlaceholder();
     setStatus('ok', `Loaded: ${file.name}`);
     render();
     e.target.value = '';
+    stopLoadSpin();
   };
-  reader.onerror = () => { setStatus('error', 'Load failed'); e.target.value = ''; };
+  reader.onerror = () => { setStatus('error', 'Load failed'); e.target.value = ''; stopLoadSpin(); };
   reader.readAsText(file, 'utf-8');
 });
 
-document.getElementById('btn-render').addEventListener('click', render);
-document.getElementById('btn-fit').addEventListener('click', fitToView);
-document.getElementById('btn-oneto1').addEventListener('click', jumpTo100);
+document.getElementById('btn-render').addEventListener('click', function() { spinBtn(this); render(); });
 
 document.getElementById('btn-zoom-in').addEventListener('click',  () => setZoom(state.zoom * 0.2));
 document.getElementById('btn-zoom-out').addEventListener('click', () => setZoom(-state.zoom * 0.2));
@@ -1214,18 +1268,19 @@ function flashCopyBtn(success) {
   }, 2000);
 }
 
-document.getElementById('btn-copy').addEventListener('click', async () => {
+document.getElementById('btn-copy').addEventListener('click', async function() {
   if (!lastSvgString) { setStatus('error', 'No rendered diagram'); return; }
-  try {
+  const doWork = async () => {
     setStatus('pending', 'Converting to PNG...');
     const exportSvg = await getExportSvg();
     const pngBlob = await svgToPngBlob(exportSvg);
-    await navigator.clipboard.write([
-      new ClipboardItem({ 'image/png': pngBlob })
-    ]);
+    await navigator.clipboard.write([ new ClipboardItem({ 'image/png': pngBlob }) ]);
     flashCopyBtn(true);
     setStatus('ok', 'PNG copied (ready to paste into Teams etc.)');
     setTimeout(() => setStatus('ok', 'Done'), 2500);
+  };
+  try {
+    await spinBtn(this, doWork());
   } catch (e) {
     console.error(e);
     flashCopyBtn(false);
@@ -1233,15 +1288,18 @@ document.getElementById('btn-copy').addEventListener('click', async () => {
   }
 });
 
-document.getElementById('btn-save').addEventListener('click', async () => {
+document.getElementById('btn-save').addEventListener('click', async function() {
   if (!lastSvgString) { setStatus('error', 'No rendered diagram'); return; }
-  try {
+  const doWork = async () => {
     setStatus('pending', 'Exporting...');
     const exportSvg = await getExportSvg();
     const svgFilename = `diagram-${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}.svg`;
     await saveFile(exportSvg, svgFilename, 'image/svg+xml', ['.svg']);
     setStatus('ok', 'SVG saved (Default theme)');
     setTimeout(() => setStatus('ok', 'Done'), 1500);
+  };
+  try {
+    await spinBtn(this, doWork());
   } catch (e) {
     setStatus('error', 'Save failed: ' + (e.message || e));
   }
@@ -1371,6 +1429,43 @@ window.addEventListener('keydown', e => {
 editorEl.addEventListener('input', () => { scheduleRender(); updatePlaceholder(); });
 
 // ──────────────────────────────────────────────
+//  Button spinner helper
+// ──────────────────────────────────────────────
+// For async actions: await spinBtn(btn, asyncFn())
+// For sync actions:  spinBtn(btn)  — spins for 400ms then stops
+function spinBtn(btn, promise) {
+  const spinner = document.createElement('span');
+  spinner.className = 'spinner';
+  btn.appendChild(spinner);
+  btn.classList.add('spinning');
+
+  const stop = () => {
+    btn.classList.remove('spinning');
+    spinner.remove();
+  };
+
+  if (!promise) {
+    setTimeout(stop, 500);
+    return;
+  }
+  const minDelay = new Promise(r => setTimeout(r, 500));
+  return Promise.all([promise, minDelay]).finally(stop);
+}
+document.addEventListener('pointerdown', e => {
+  const btn = e.target.closest('.btn');
+  if (!btn) return;
+  const rect = btn.getBoundingClientRect();
+  const size = Math.max(rect.width, rect.height);
+  const x = e.clientX - rect.left - size / 2;
+  const y = e.clientY - rect.top  - size / 2;
+  const ripple = document.createElement('span');
+  ripple.className = 'ripple';
+  ripple.style.cssText = `width:${size}px;height:${size}px;left:${x}px;top:${y}px`;
+  btn.appendChild(ripple);
+  ripple.addEventListener('animationend', () => ripple.remove());
+});
+
+// ──────────────────────────────────────────────
 //  Drag & drop .mmd / .txt onto editor
 // ──────────────────────────────────────────────
 editorPane.addEventListener('dragover', e => {
@@ -1389,6 +1484,7 @@ editorPane.addEventListener('drop', e => {
   reader.onload = evt => {
     editorEl.value = evt.target.result;
     charCount.textContent = editorEl.value.length + ' chars';
+    loadedFilename = file.name.replace(/\.[^.]+$/, '');
     updatePlaceholder();
     setStatus('ok', `Loaded: ${file.name}`);
     render();
