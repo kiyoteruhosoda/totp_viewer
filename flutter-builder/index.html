@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Flutter Builder Management v1.0.0</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; color: #1a1a1a; font-size: 14px; }
+    .app { max-width: 720px; margin: 0 auto; padding: 2rem 1.5rem; }
+    .header { margin-bottom: 1.5rem; display: flex; align-items: flex-start; justify-content: space-between; }
+    .header h1 { font-size: 18px; font-weight: 500; }
+    .header p { font-size: 13px; color: #666; margin-top: 4px; }
+    .version-badge { font-size: 11px; font-weight: 500; font-family: monospace; background: #e8e8e8; color: #555; border: 1px solid #ddd; border-radius: 6px; padding: 3px 8px; white-space: nowrap; margin-top: 2px; }
+    .section { margin-bottom: 1.5rem; }
+    .section-title { font-size: 11px; font-weight: 500; color: #888; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
+    .card { background: #fff; border: 1px solid #e0e0e0; border-radius: 10px; padding: 1rem 1.25rem; }
+    .metrics { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 10px; margin-bottom: 1.5rem; }
+    .metric { background: #f0f0f0; border-radius: 8px; padding: 12px 14px; }
+    .metric-label { font-size: 12px; color: #888; margin-bottom: 4px; }
+    .metric-value { font-size: 18px; font-weight: 500; }
+    .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+    .dot-running { background: #639922; }
+    .dot-stopped { background: #888; }
+    .dot-error { background: #E24B4A; }
+    .dot-unknown { background: #EF9F27; }
+    .upload-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+    .upload-box { border: 1px dashed #bbb; border-radius: 8px; padding: 16px; text-align: center; cursor: pointer; transition: background 0.15s; }
+    .upload-box:hover { background: #f5f5f5; }
+    .upload-box input { display: none; }
+    .upload-box .icon { font-size: 20px; margin-bottom: 6px; }
+    .upload-box .name { font-size: 13px; font-weight: 500; }
+    .upload-box .sub { font-size: 12px; color: #888; margin-top: 2px; }
+    .upload-box.selected { border-style: solid; border-color: #378ADD; background: #E6F1FB; }
+    .upload-box.selected .name { color: #185FA5; }
+    .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 8px; border: 1px solid #ccc; background: transparent; font-size: 13px; font-weight: 500; color: #1a1a1a; cursor: pointer; transition: background 0.15s; font-family: inherit; }
+    .btn:hover { background: #f0f0f0; }
+    .btn:active { transform: scale(0.98); }
+    .btn-primary { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
+    .btn-primary:hover { background: #333; }
+    .btn-danger { border-color: #e24b4a; color: #a32d2d; }
+    .btn-danger:hover { background: #FCEBEB; }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .log-box { background: #f5f5f5; border-radius: 8px; padding: 12px; font-family: monospace; font-size: 12px; color: #555; max-height: 220px; overflow-y: auto; white-space: pre-wrap; word-break: break-all; line-height: 1.6; }
+    .log-empty { color: #aaa; font-style: italic; }
+    .config-row { display: grid; grid-template-columns: 120px 1fr; gap: 8px; align-items: center; margin-bottom: 8px; }
+    .config-label { font-size: 12px; color: #666; }
+    .config-input { font-size: 12px; font-family: monospace; padding: 6px 10px; border-radius: 6px; border: 1px solid #ccc; background: #fafafa; color: #1a1a1a; width: 100%; }
+    .toast { position: fixed; bottom: 16px; right: 16px; background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 10px 16px; font-size: 13px; color: #1a1a1a; opacity: 0; transition: opacity 0.2s; pointer-events: none; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .toast.show { opacity: 1; }
+    .refresh-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+    .auto-label { font-size: 12px; color: #888; }
+    .footer { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #e0e0e0; display: flex; align-items: center; justify-content: space-between; }
+    .footer-left { font-size: 12px; color: #aaa; }
+    .changelog-btn { font-size: 12px; color: #888; background: none; border: none; cursor: pointer; font-family: inherit; padding: 0; }
+    .changelog-btn:hover { color: #1a1a1a; }
+    .changelog { margin-top: 10px; background: #f5f5f5; border-radius: 8px; padding: 12px 14px; display: none; }
+    .changelog.open { display: block; }
+    .changelog-item { font-size: 12px; color: #666; line-height: 1.8; }
+    .changelog-version { font-family: monospace; font-weight: 500; color: #1a1a1a; }
+  </style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <div>
+      <h1>Flutter builder management</h1>
+      <p>ACI runner と ACR イメージの管理</p>
+    </div>
+    <div class="version-badge">v1.0.0</div>
+  </div>
+
+  <div class="metrics">
+    <div class="metric">
+      <div class="metric-label">ACI status</div>
+      <div class="metric-value" id="m-status"><span class="status-dot dot-unknown"></span>—</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Exit code</div>
+      <div class="metric-value" id="m-exit">—</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Last checked</div>
+      <div class="metric-value" id="m-time" style="font-size:13px;">—</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">設定</div>
+    <div class="card">
+      <div class="config-row">
+        <label class="config-label">STATUS_URL</label>
+        <input class="config-input" id="cfg-status" placeholder="https://func-....azurewebsites.net/api/aci-status?code=..." />
+      </div>
+      <div class="config-row">
+        <label class="config-label">STOP_URL</label>
+        <input class="config-input" id="cfg-stop" placeholder="https://func-....azurewebsites.net/api/stop-build?code=..." />
+      </div>
+      <div class="config-row">
+        <label class="config-label">UPLOAD_URL</label>
+        <input class="config-input" id="cfg-upload" placeholder="https://func-....azurewebsites.net/api/upload-and-build?code=..." />
+      </div>
+      <div style="margin-top:10px;">
+        <button class="btn btn-primary" onclick="saveConfig()">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">ACI ログ</div>
+    <div class="card">
+      <div class="refresh-row">
+        <span class="auto-label" id="auto-label">自動更新: 停止中</span>
+        <div class="btn-row">
+          <button class="btn" onclick="fetchStatus()">更新</button>
+          <button class="btn" id="btn-auto" onclick="toggleAuto()">自動更新 ON</button>
+          <button class="btn btn-danger" onclick="stopACI()">ACI 停止</button>
+        </div>
+      </div>
+      <div class="log-box" id="log-box"><span class="log-empty">ログなし — 「更新」を押してください</span></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">イメージ再ビルド</div>
+    <div class="card">
+      <div class="upload-grid">
+        <div class="upload-box" id="box-dockerfile" onclick="document.getElementById('file-dockerfile').click()">
+          <input type="file" id="file-dockerfile" onchange="onFileSelect('dockerfile', this)" />
+          <div class="icon">📄</div>
+          <div class="name" id="name-dockerfile">Dockerfile</div>
+          <div class="sub">クリックして選択</div>
+        </div>
+        <div class="upload-box" id="box-entrypoint" onclick="document.getElementById('file-entrypoint').click()">
+          <input type="file" id="file-entrypoint" onchange="onFileSelect('entrypoint', this)" />
+          <div class="icon">📜</div>
+          <div class="name" id="name-entrypoint">entrypoint.sh</div>
+          <div class="sub">クリックして選択</div>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="btn-build" onclick="uploadAndBuild()" disabled>アップロード &amp; ビルド</button>
+        <button class="btn" onclick="clearFiles()">クリア</button>
+      </div>
+      <div id="build-result" style="margin-top:10px; font-size:13px; color:#666;"></div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <span class="footer-left">tools/flutter-builder &nbsp;·&nbsp; v1.0.0</span>
+    <button class="changelog-btn" onclick="toggleChangelog()">更新履歴</button>
+  </div>
+  <div class="changelog" id="changelog">
+    <div class="changelog-item">
+      <span class="changelog-version">v1.0.0</span> &nbsp;2026-04-06<br>
+      初回リリース。ACI ステータス確認・停止、Dockerfile アップロード &amp; ACR ビルドトリガー機能を実装。
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const APP_VERSION = 'v1.0.0';
+  let autoTimer = null;
+  let files = {};
+
+  function loadConfig() {
+    const s = localStorage.getItem('flutter-builder-config');
+    if (s) {
+      const c = JSON.parse(s);
+      document.getElementById('cfg-status').value = c.status || '';
+      document.getElementById('cfg-stop').value = c.stop || '';
+      document.getElementById('cfg-upload').value = c.upload || '';
+    }
+  }
+
+  function saveConfig() {
+    const c = {
+      status: document.getElementById('cfg-status').value.trim(),
+      stop: document.getElementById('cfg-stop').value.trim(),
+      upload: document.getElementById('cfg-upload').value.trim()
+    };
+    localStorage.setItem('flutter-builder-config', JSON.stringify(c));
+    showToast('設定を保存しました');
+  }
+
+  function getConfig() {
+    const s = localStorage.getItem('flutter-builder-config');
+    return s ? JSON.parse(s) : {};
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+  }
+
+  function toggleChangelog() {
+    document.getElementById('changelog').classList.toggle('open');
+  }
+
+  async function fetchStatus() {
+    const cfg = getConfig();
+    if (!cfg.status) { showToast('STATUS_URL を設定してください'); return; }
+    try {
+      const res = await fetch(cfg.status);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      const dotClass = data.status === 'Running' ? 'dot-running'
+                     : data.status === 'Terminated' ? (data.exit_code === 0 ? 'dot-stopped' : 'dot-error')
+                     : 'dot-unknown';
+      document.getElementById('m-status').innerHTML = `<span class="status-dot ${dotClass}"></span>${data.status || '—'}`;
+      document.getElementById('m-exit').textContent = data.exit_code != null ? data.exit_code : '—';
+      document.getElementById('m-time').textContent = new Date().toLocaleTimeString('ja-JP');
+      const logBox = document.getElementById('log-box');
+      logBox.innerHTML = data.logs ? escapeHtml(data.logs) : '<span class="log-empty">ログなし</span>';
+      logBox.scrollTop = logBox.scrollHeight;
+    } catch(e) {
+      showToast('取得失敗: ' + e.message);
+    }
+  }
+
+  function toggleAuto() {
+    const btn = document.getElementById('btn-auto');
+    const label = document.getElementById('auto-label');
+    if (autoTimer) {
+      clearInterval(autoTimer);
+      autoTimer = null;
+      btn.textContent = '自動更新 ON';
+      label.textContent = '自動更新: 停止中';
+    } else {
+      fetchStatus();
+      autoTimer = setInterval(fetchStatus, 10000);
+      btn.textContent = '自動更新 OFF';
+      label.textContent = '自動更新: 10秒ごと';
+    }
+  }
+
+  async function stopACI() {
+    const cfg = getConfig();
+    if (!cfg.stop) { showToast('STOP_URL を設定してください'); return; }
+    if (!confirm('ACI を停止しますか？')) return;
+    try {
+      const res = await fetch(cfg.stop, { method: 'POST' });
+      const text = await res.text();
+      showToast(res.ok ? 'ACI を停止しました' : '停止失敗: ' + text);
+      if (res.ok) setTimeout(fetchStatus, 2000);
+    } catch(e) {
+      showToast('停止失敗: ' + e.message);
+    }
+  }
+
+  function onFileSelect(type, input) {
+    if (!input.files.length) return;
+    files[type] = input.files[0];
+    document.getElementById('box-' + type).classList.add('selected');
+    document.getElementById('name-' + type).textContent = input.files[0].name;
+    checkBuildReady();
+  }
+
+  function checkBuildReady() {
+    document.getElementById('btn-build').disabled = !(files.dockerfile && files.entrypoint);
+  }
+
+  function clearFiles() {
+    files = {};
+    ['dockerfile', 'entrypoint'].forEach(t => {
+      document.getElementById('file-' + t).value = '';
+      document.getElementById('box-' + t).classList.remove('selected');
+      document.getElementById('name-' + t).textContent = t === 'dockerfile' ? 'Dockerfile' : 'entrypoint.sh';
+    });
+    document.getElementById('btn-build').disabled = true;
+    document.getElementById('build-result').textContent = '';
+  }
+
+  async function uploadAndBuild() {
+    const cfg = getConfig();
+    if (!cfg.upload) { showToast('UPLOAD_URL を設定してください'); return; }
+    const btn = document.getElementById('btn-build');
+    const result = document.getElementById('build-result');
+    btn.disabled = true;
+    btn.textContent = 'アップロード中...';
+    result.textContent = '';
+    try {
+      const fd = new FormData();
+      fd.append('Dockerfile', files.dockerfile, 'Dockerfile');
+      fd.append('entrypoint.sh', files.entrypoint, 'entrypoint.sh');
+      const res = await fetch(cfg.upload, { method: 'POST', body: fd });
+      const text = await res.text();
+      if (res.ok) {
+        result.style.color = '#3B6D11';
+        result.textContent = 'ビルド開始: ' + text;
+        showToast('ACR ビルドを開始しました');
+        clearFiles();
+      } else {
+        result.style.color = '#A32D2D';
+        result.textContent = 'エラー: ' + text;
+      }
+    } catch(e) {
+      result.style.color = '#A32D2D';
+      result.textContent = '失敗: ' + e.message;
+    } finally {
+      btn.textContent = 'アップロード & ビルド';
+      checkBuildReady();
+    }
+  }
+
+  function escapeHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  loadConfig();
+</script>
+</body>
+</html>
