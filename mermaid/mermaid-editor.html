@@ -656,6 +656,8 @@ const state = {
 const MIN_ZOOM  = 0.02;  // 2% — allows very large diagrams to be seen
 const MAX_ZOOM  = 20;
 const ZOOM_STEP = 0.12;
+const MAX_DISPLAY_PERCENT = 200;
+const MIN_DISPLAY_PERCENT = 10;
 
 // Padding (px) around diagram when fitting to viewport
 const FIT_PADDING = 60;
@@ -939,8 +941,26 @@ function setZoom(delta, cx, cy) {
   const pivotY = (cy ?? wrap.height / 2) - wrap.top;
 
   const prevZoom = state.zoom;
-  state.zoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, state.zoom + delta));
 
+  // 一旦ズーム更新
+  let newZoom = state.zoom + delta;
+
+  // ★ 表示%に変換
+  const percent = state.displayBase > 0
+    ? (newZoom / state.displayBase * 100)
+    : (newZoom * 100);
+
+  // ★ %で制限
+  if (percent > MAX_DISPLAY_PERCENT) {
+    newZoom = state.displayBase * (MAX_DISPLAY_PERCENT / 100);
+  }
+  if (percent < MIN_DISPLAY_PERCENT) {
+    newZoom = state.displayBase * (MIN_DISPLAY_PERCENT / 100);
+  }
+
+  state.zoom = newZoom;
+
+  // パン補正
   const ratio = state.zoom / prevZoom;
   state.panX = pivotX - ratio * (pivotX - state.panX);
   state.panY = pivotY - ratio * (pivotY - state.panY);
