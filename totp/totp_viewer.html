@@ -33,6 +33,10 @@
       display: grid;
       place-items: center;
       padding: 24px;
+      
+  box-sizing: border-box;   /* ← 追加 */
+  min-height: 100vh;         /* ← height: 100% の代替 */
+
     }
 
     .card {
@@ -241,6 +245,32 @@
       box-shadow: 0 0 0 3px rgba(255, 107, 107, 0.12);
     }
 
+    .value.editable {
+      cursor: pointer;
+      padding: 2px 4px;
+      border-radius: 4px;
+      transition: background 0.15s ease;
+    }
+
+    .value.editable::after {
+      content: " ✎";
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 400;
+    }
+
+    .value-edit {
+      background: var(--panel);
+      color: var(--text);
+      border: 1px solid var(--accent);
+      border-radius: 6px;
+      padding: 4px 8px;
+      font-size: 14px;
+      font-family: inherit;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
     .help {
       margin-top: 6px;
       font-size: 12px;
@@ -400,6 +430,24 @@
       opacity: 1;
       transform: translateX(-50%) translateY(0);
     }
+
+    .new {
+      margin-top: 12px;
+      display: flex;
+      font-size: 13px;
+      justify-content: flex-end;
+    }
+
+    .new a {
+      color: var(--muted);
+      text-decoration: none;
+      transition: color 0.15s ease;
+    }
+
+    .new a:hover {
+      color: var(--accent-hover);
+      text-decoration: underline;
+    }
   </style>
 </head>
 
@@ -456,53 +504,70 @@
       <div class="dot"></div>
       <div id="statusText">Initializing...</div>
     </div>
+
+    <div class="new"><a href="?" title="Register a new entry">New Entry</a></div>
   </div>
 
   <!-- Scanner Page -->
-  <div id="scannerPage" class="card" role="region" aria-labelledby="scannerTitle" style="display: none;">
-    <header>
-      <div>
-        <h1 id="scannerTitle">QR Scanner</h1>
-      </div>
-    </header>
+  <div id="scannerPage" style="display: none; width: min(780px, 100%);">
 
-    <section class="scanner-section">
-      <h2 class="meta">Specify security key via QR code / File / Clipboard / Camera / Manual input</h2>
-      <div class="scanner-controls">
-        <div style="display: flex; gap: 8px; ">
-          <button id="useClipboard" type="button">Clipboard</button>
-          <button id="debugClipboard" class="secondary" type="button">Debug</button>
+    <!-- Card 1: Scan / Upload -->
+    <div class="card" role="region" aria-labelledby="scannerTitle">
+      <header>
+        <div>
+          <h1 id="scannerTitle">Scan from QR Code</h1>
+          <div class="meta">Load a secret via clipboard, image file, or camera scan.</div>
         </div>
-        <label for="fileInput">
-          Select File
-          <input id="fileInput" type="file" accept="image/*" style="display:none">
-        </label>
-      </div>
+      </header>
 
-      <h2 class="camera-info">Scan QR with Camera (BarcodeDetector)</h2>
-      <div class="camera-area">
-        <video id="video" autoplay playsinline></video>
-        <div class="camera-controls">
-          <button id="startCam" type="button">Start Camera</button>
-          <button id="stopCam" class="secondary" type="button">Stop</button>
+      <section class="scanner-section">
+        <div class="scanner-controls">
+          <div style="display: flex; gap: 8px;">
+            <button id="useClipboard" type="button">Clipboard</button>
+            <button id="debugClipboard" class="secondary" type="button">Debug</button>
+          </div>
+          <label for="fileInput">
+            Select File
+            <input id="fileInput" type="file" accept="image/*" style="display:none">
+          </label>
         </div>
-      </div>
 
-      <h2 class="camera-info">Enter or Paste QR Code Text (otpauth URI) or BASE32 Secret</h2>
-      <div class="input-area">
-        <textarea id="pasteArea" placeholder="Enter or paste QR code text (otpauth URI) or BASE32 secret"></textarea>
-        <div class="input-actions">
-          <button id="usePasted" type="button">Use Input</button>
+        <h2 class="camera-info">Scan QR with Camera (BarcodeDetector)</h2>
+        <div class="camera-area">
+          <video id="video" autoplay playsinline></video>
+          <div class="camera-controls">
+            <button id="startCam" type="button">Start Camera</button>
+            <button id="stopCam" class="secondary" type="button">Stop</button>
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
 
-    <div class="status" id="scannerStatus">
-      <div class="dot"></div>
-      <div id="scannerStatusText">Scanner Ready</div>
     </div>
-  </div>
 
+    <!-- Card 2: Manual Entry -->
+    <div class="card" role="region" aria-labelledby="manualTitle" style="margin-top: 16px;">
+      <header>
+        <div>
+          <h1 id="manualTitle">Enter Secret Manually</h1>
+          <div class="meta">Paste an otpauth URI or a BASE32 secret key.</div>
+        </div>
+      </header>
+
+      <section class="scanner-section">
+        <div class="input-area">
+          <input id="pasteArea" placeholder="otpauth://... or BASE32 secret">
+          <div class="input-actions">
+            <button id="usePasted" type="button">Use Input</button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+      <div class="status" id="scannerStatus">
+        <div class="dot"></div>
+        <div id="scannerStatusText">Scanner Ready</div>
+      </div>
+  </div>
   <script>
     // ========== Page Management ==========
     const totpPage = document.getElementById('totpPage');
@@ -985,9 +1050,64 @@
         el.account.textContent = account;
         el.description.textContent = desc;
         el.title.textContent = `${desc} (${account})`;
+        
+        // ===== Editable Account / Description =====
+        function makeEditable(elm, paramKey, placeholder) {
+          function refreshPlaceholder() {
+            if (!elm.textContent.trim()) {
+              elm.textContent = placeholder;
+              elm.style.opacity = 0.5;
+            } else {
+              elm.style.opacity = 1;
+            }
+          }
+          refreshPlaceholder();
+        
+          elm.addEventListener("click", () => {
+            const current = (elm.style.opacity == 0.5) ? "" : elm.textContent;
+            const input = document.createElement("input");
+            input.type = "text";
+            input.value = current;
+            input.className = "value-edit";
+            input.placeholder = placeholder;
+        
+            elm.replaceWith(input);
+            input.focus();
+            input.select();
+        
+            let done = false;
+            const commit = (save) => {
+              if (done) return;
+              done = true;
+              if (save) {
+                const newVal = input.value.trim();
+                const params = new URLSearchParams(location.search);
+                if (newVal) {
+                  params.set(paramKey, newVal);
+                } else {
+                  params.delete(paramKey);
+                }
+                // クエリ付きで再ロード
+                location.search = params.toString();
+              } else {
+                // キャンセル：元に戻す
+                input.replaceWith(elm);
+                refreshPlaceholder();
+              }
+            };
+        
+            input.addEventListener("keydown", (e) => {
+              if (e.key === "Enter") { e.preventDefault(); commit(true); }
+              else if (e.key === "Escape") { e.preventDefault(); commit(false); }
+            });
+            input.addEventListener("blur", () => commit(true));
+          });
+        }
+        
+        makeEditable(el.account, "a", "(Enter account name)");
+        makeEditable(el.description, "d", "(Enter description)");
 
-        // TOTP表示/非表示の制御
-        let isVisible = true;  // デフォルト
+        let isVisible = true;
         let currentOTP = "------";
         const toggleBtn = document.getElementById("toggleVisibility");
 
@@ -1063,7 +1183,7 @@
           .catch((err) => {
             console.warn("Background time sync failed.", err);
 
-            serverTimeAvailable = false; // 念のため
+            serverTimeAvailable = false;
 
             el.statusText.textContent = "Using local time";
             setTimeout(() => {
@@ -1098,12 +1218,10 @@
             const pct = (now % total) / total;          // 0 -> 1
             const remainRatio = 1 - pct;                // 1 -> 0
 
-            // 円リングはそのまま使う
             el.circle.style.strokeDashoffset = (CIRCUM * (1 - pct)).toFixed(2);
             const color = lerpColor3(pct);
             el.circle.style.stroke = color;
 
-            // 横プログレスバーを更新
             el.progressBar.style.width = `${remainRatio * 100}%`;
             el.progressBar.style.background = color;
 
@@ -1161,7 +1279,7 @@
         });
 
         // Initial startup
-        updateVisibility(); // 初期表示状態を設定
+        updateVisibility();
         startAnim();
         loop();
       })();
